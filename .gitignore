@@ -1,0 +1,51 @@
+# Python
+__pycache__/
+*.py[cod]
+*.egg-info/
+.venv/
+venv/
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+htmlcov/
+.coverage
+
+# Node
+node_modules/
+.next/
+out/
+.turbo/
+
+# Env
+.env
+.env.*
+!.env.example
+
+# Data
+data/
+models/
+*.pt
+*.bin
+*.onnx
+chroma_data/
+minio_data/
+postgres_data/
+redis_data/
+*.wav
+*.mp3
+*.flac
+!frontend/public/**
+
+# IDE
+.vscode/
+.idea/
+*.swp
+.DS_Store
+
+# Logs
+*.log
+logs/
+
+# Build
+dist/
+build/

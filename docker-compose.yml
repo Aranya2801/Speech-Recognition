@@ -1,0 +1,181 @@
+version: "3.9"
+
+x-backend-common: &backend-common
+  build:
+    context: ./backend
+    dockerfile: Dockerfile
+  env_file: .env
+  depends_on:
+    postgres:
+      condition: service_healthy
+    redis:
+      condition: service_healthy
+    chromadb:
+      condition: service_started
+    minio:
+      condition: service_started
+  volumes:
+    - ./backend:/app
+    - model_cache:/root/.cache
+  networks: [speechnet]
+
+services:
+  # ---------------------------------------------------------------- #
+  # Core API
+  # ---------------------------------------------------------------- #
+  backend:
+    <<: *backend-common
+    container_name: speechai-backend
+    command: uvicorn app.main:app --host 0.0.0.0 --port 8000 --reload
+    ports:
+      - "8000:8000"
+
+  # ---------------------------------------------------------------- #
+  # Async workers (transcription, diarization, summarization, RAG ingestion)
+  # ---------------------------------------------------------------- #
+  celery-worker:
+    <<: *backend-common
+    container_name: speechai-celery-worker
+    command: celery -A app.core.celery_app worker --loglevel=info --concurrency=2
+    ports: []
+
+  celery-beat:
+    <<: *backend-common
+    container_name: speechai-celery-beat
+    command: celery -A app.core.celery_app beat --loglevel=info
+    ports: []
+
+  flower:
+    <<: *backend-common
+    container_name: speechai-flower
+    command: celery -A app.core.celery_app flower --port=5555
+    ports:
+      - "5555:5555"
+
+  # ---------------------------------------------------------------- #
+  # Frontend
+  # ---------------------------------------------------------------- #
+  frontend:
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile
+    container_name: speechai-frontend
+    env_file: .env
+    depends_on: [backend]
+    ports:
+      - "3000:3000"
+    volumes:
+      - ./frontend:/app
+      - /app/node_modules
+      - /app/.next
+    networks: [speechnet]
+
+  # ---------------------------------------------------------------- #
+  # Data layer
+  # ---------------------------------------------------------------- #
+  postgres:
+    image: postgres:16-alpine
+    container_name: speechai-postgres
+    environment:
+      POSTGRES_USER: ${POSTGRES_USER:-speechai}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-speechai_password}
+      POSTGRES_DB: ${POSTGRES_DB:-speechai}
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    ports:
+      - "5432:5432"
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-speechai}"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+    networks: [speechnet]
+
+  redis:
+    image: redis:7-alpine
+    container_name: speechai-redis
+    command: redis-server --appendonly yes
+    volumes:
+      - redis_data:/data
+    ports:
+      - "6379:6379"
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+    networks: [speechnet]
+
+  chromadb:
+    image: chromadb/chroma:latest
+    container_name: speechai-chromadb
+    volumes:
+      - chroma_data:/chroma/chroma
+    ports:
+      - "8001:8000"
+    networks: [speechnet]
+
+  minio:
+    image: minio/minio:latest
+    container_name: speechai-minio
+    command: server /data --console-address ":9001"
+    environment:
+      MINIO_ROOT_USER: ${MINIO_ACCESS_KEY:-speechai}
+      MINIO_ROOT_PASSWORD: ${MINIO_SECRET_KEY:-speechai_secret_key}
+    volumes:
+      - minio_data:/data
+    ports:
+      - "9000:9000"
+      - "9001:9001"
+    networks: [speechnet]
+
+  # ---------------------------------------------------------------- #
+  # Optional local LLM runtime (Llama 3.1 / Mistral etc.)
+  # ---------------------------------------------------------------- #
+  ollama:
+    image: ollama/ollama:latest
+    container_name: speechai-ollama
+    volumes:
+      - ollama_data:/root/.ollama
+    ports:
+      - "11434:11434"
+    networks: [speechnet]
+
+  # ---------------------------------------------------------------- #
+  # Observability
+  # ---------------------------------------------------------------- #
+  prometheus:
+    image: prom/prometheus:latest
+    container_name: speechai-prometheus
+    volumes:
+      - ./infra/monitoring/prometheus.yml:/etc/prometheus/prometheus.yml
+      - prometheus_data:/prometheus
+    ports:
+      - "9090:9090"
+    networks: [speechnet]
+
+  grafana:
+    image: grafana/grafana:latest
+    container_name: speechai-grafana
+    environment:
+      GF_SECURITY_ADMIN_PASSWORD: admin
+    volumes:
+      - ./infra/monitoring/grafana/dashboards:/etc/grafana/provisioning/dashboards
+      - grafana_data:/var/lib/grafana
+    ports:
+      - "3001:3000"
+    networks: [speechnet]
+
+networks:
+  speechnet:
+    driver: bridge
+
+volumes:
+  postgres_data:
+  redis_data:
+  chroma_data:
+  minio_data:
+  ollama_data:
+  prometheus_data:
+  grafana_data:
+  model_cache:
