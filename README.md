@@ -4,9 +4,9 @@
 
 <br/>
 
-[![Backend CI](https://github.com/your-username/speech-recognition-ai/actions/workflows/ci-backend.yml/badge.svg)](.github/workflows/ci-backend.yml)
-[![Frontend CI](https://github.com/your-username/speech-recognition-ai/actions/workflows/ci-frontend.yml/badge.svg)](.github/workflows/ci-frontend.yml)
-[![CodeQL](https://github.com/your-username/speech-recognition-ai/actions/workflows/codeql.yml/badge.svg)](.github/workflows/codeql.yml)
+[![Backend CI](https://github.com/Aranya2801 /speech-recognition-ai/actions/workflows/ci-backend.yml/badge.svg)](.github/workflows/ci-backend.yml)
+[![Frontend CI](https://github.com/Aranya2801 /speech-recognition-ai/actions/workflows/ci-frontend.yml/badge.svg)](.github/workflows/ci-frontend.yml)
+[![CodeQL](https://github.com/Aranya2801 /speech-recognition-ai/actions/workflows/codeql.yml/badge.svg)](.github/workflows/codeql.yml)
 [![License: MIT](https://img.shields.io/badge/License-MIT-5EEAD4.svg)](LICENSE)
 [![Python 3.11](https://img.shields.io/badge/python-3.11-blue.svg)](backend/pyproject.toml)
 [![Next.js 15](https://img.shields.io/badge/Next.js-15-black.svg)](frontend/package.json)
