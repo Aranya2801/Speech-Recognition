@@ -73,7 +73,7 @@ provider is a local Ollama model).
 
 | Live Capture | Assistant | Analytics |
 |---|---|---|
-| `dashboard.png` | `assistant.png` | `analytics.png` |
+| dashboard.png | assistant.png | analytics.png |
 
 ## Architecture
 
